@@ -1,4 +1,5 @@
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import html2canvas from 'html2canvas';
 import { usePriceData } from '../hooks/usePriceData';
 import useBitcoinStore from '../store/useBitcoinStore';
 
@@ -232,10 +233,44 @@ function drawPressureChart(canvas, prices) {
 
 // ─── Main component ──────────────────────────────────────────
 export default function CycleWatch() {
-  const overlayRef  = useRef(null);
-  const pressureRef = useRef(null);
+  const overlayRef   = useRef(null);
+  const pressureRef  = useRef(null);
+  const cardRef      = useRef(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareImg, setShareImg] = useState(null); // data URL for preview modal
   const { prices, loading } = usePriceData();
   const { price: currentPrice, fearGreedValue, fearGreedLabel } = useBitcoinStore();
+
+  const handleShare = useCallback(async () => {
+    if (!cardRef.current || sharing) return;
+    setSharing(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#0d0d1a',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      setShareImg(dataUrl);
+    } catch (e) {
+      console.warn('Screenshot failed:', e);
+      // Fallback: open Twitter intent directly without image
+      openTwitterIntent();
+    }
+    setSharing(false);
+  }, [sharing]);
+
+  const openTwitterIntent = useCallback((metrics) => {
+    if (!metrics) return;
+    const signal = metrics.isBuy ? 'BUY' : 'SELL';
+    const conf = metrics.confidence;
+    const phase = metrics.cyclePhase;
+    const price = Math.round(metrics.cp).toLocaleString('en-US');
+    const peak = Math.round(metrics.peakPrice / 1000);
+    const text = `BTC CycleWatch Signal 🔭\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nFree dashboard → chainbo.app\n\n#Bitcoin #BTC #Crypto`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+  }, []);
 
   const metrics = useMemo(() => {
     if (!prices || prices.length < 400) return null;
@@ -364,7 +399,45 @@ export default function CycleWatch() {
   ];
 
   return (
-    <div className="glass p-6 mt-6 animate-fade-in" style={{ border: '1px solid rgba(6,182,212,0.2)' }}>
+    <>
+    {/* Share preview modal */}
+    {shareImg && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+           style={{ background: 'rgba(0,0,0,0.85)' }}
+           onClick={() => setShareImg(null)}>
+        <div className="rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl"
+             style={{ border: '1px solid rgba(6,182,212,0.3)' }}
+             onClick={e => e.stopPropagation()}>
+          <div className="p-4" style={{ background: '#0d0d1a' }}>
+            <p className="text-sm font-semibold text-white mb-3">Share CycleWatch signal</p>
+            <img src={shareImg} alt="CycleWatch snapshot" className="w-full rounded-lg mb-4" />
+            <div className="flex gap-3">
+              <button
+                onClick={() => openTwitterIntent(metrics)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90"
+                style={{ background: '#000' }}>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                Post on X
+              </button>
+              <a
+                href={shareImg}
+                download="cyclewatch.png"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90"
+                style={{ background: 'rgba(6,182,212,0.2)', border: '1px solid rgba(6,182,212,0.4)' }}>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Save image
+              </a>
+              <button
+                onClick={() => setShareImg(null)}
+                className="px-4 py-3 rounded-xl text-gray-400 hover:text-white transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div ref={cardRef} className="glass p-6 mt-6 animate-fade-in" style={{ border: '1px solid rgba(6,182,212,0.2)' }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm text-white"
@@ -373,9 +446,24 @@ export default function CycleWatch() {
           <h2 className="text-white font-bold text-lg">CycleWatch</h2>
           <p className="text-xs text-gray-500 uppercase tracking-widest">BTC 1458-DAY CYCLE PREDICTION MODEL</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-xs text-gray-500">Live</span>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-95"
+            style={{ background: sharing ? 'rgba(0,0,0,0.4)' : '#000', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>
+            {sharing
+              ? <span className="animate-pulse">Capturing…</span>
+              : <>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  Share on X
+                </>
+            }
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs text-gray-500">Live</span>
+          </div>
         </div>
       </div>
 
@@ -501,5 +589,6 @@ export default function CycleWatch() {
         <span className="italic">Not financial advice. Past performance does not guarantee future results. DYOR</span>
       </p>
     </div>
+    </>
   );
 }

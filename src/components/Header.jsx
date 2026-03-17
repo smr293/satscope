@@ -13,7 +13,7 @@ export default function Header() {
             S
           </div>
           <span className="text-lg font-bold text-white hidden sm:block tracking-tight">
-            Sat<span style={{ color: '#F7931A' }}>Scope</span>
+            Chain<span style={{ color: '#F7931A' }}>Bo</span>
           </span>
         </div>
 
