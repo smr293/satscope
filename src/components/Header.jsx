@@ -8,13 +8,17 @@ export default function Header() {
     <header className="sticky top-0 z-50 glass-static px-4 sm:px-6 py-3 mb-6">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm"
-               style={{ background: 'linear-gradient(135deg, #F7931A, #ff6b00)' }}>
-            S
+          {/* Ninja star logo */}
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base relative"
+               style={{ background: 'linear-gradient(135deg, #F7931A, #ff4500)' }}>
+            <span style={{ filter: 'drop-shadow(0 0 4px rgba(247,147,26,0.6))' }}>忍</span>
           </div>
-          <span className="text-lg font-bold text-white hidden sm:block tracking-tight">
-            Chain<span style={{ color: '#F7931A' }}>Bo</span>
-          </span>
+          <div className="hidden sm:block">
+            <span className="text-lg font-black text-white tracking-tight">
+              Satoshi<span className="text-gradient-orange">Kuza</span>
+            </span>
+            <p className="text-[9px] text-gray-500 uppercase tracking-[0.25em] -mt-0.5">Shadow of the Chain</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">

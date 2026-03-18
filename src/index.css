@@ -95,3 +95,38 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Ninja slash divider */
+.slash-divider {
+  position: relative;
+  overflow: hidden;
+}
+.slash-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  width: 120%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #F7931A, transparent);
+  opacity: 0.4;
+}
+
+/* Glow hover for interactive cards */
+.glow-hover:hover {
+  box-shadow: 0 0 20px rgba(247, 147, 26, 0.15), inset 0 0 20px rgba(247, 147, 26, 0.03);
+}
+
+/* Kanji watermark */
+.kanji-watermark::after {
+  content: '忍';
+  position: absolute;
+  bottom: 10px;
+  right: 16px;
+  font-size: 80px;
+  opacity: 0.02;
+  color: #F7931A;
+  font-weight: 900;
+  pointer-events: none;
+  user-select: none;
+}

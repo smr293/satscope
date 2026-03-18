@@ -268,7 +268,7 @@ export default function CycleWatch() {
     const phase = metrics.cyclePhase;
     const price = Math.round(metrics.cp).toLocaleString('en-US');
     const peak = Math.round(metrics.peakPrice / 1000);
-    const text = `BTC CycleWatch Signal 🔭\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nFree dashboard → chainbo.app\n\n#Bitcoin #BTC #Crypto`;
+    const text = `BTC CycleWatch Signal ⚔️\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nSilent intelligence → SatoshiKuza\n\n#Bitcoin #BTC #Crypto`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   }, []);
 
