@@ -20,6 +20,9 @@
     "serve": "^14.2.6",
     "zustand": "^5.0.12"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@tailwindcss/vite": "^4.2.1",
