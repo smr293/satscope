@@ -261,16 +261,18 @@ export default function CycleWatch() {
     setSharing(false);
   }, [sharing]);
 
-  const openTwitterIntent = useCallback((metrics) => {
-    if (!metrics) return;
-    const signal = metrics.isBuy ? 'BUY' : 'SELL';
-    const conf = metrics.confidence;
-    const phase = metrics.cyclePhase;
-    const price = Math.round(metrics.cp).toLocaleString('en-US');
-    const peak = Math.round(metrics.peakPrice / 1000);
-    const text = `BTC CycleWatch Signal ⚔️\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nSilent intelligence → SatoshiKuza\n\n#Bitcoin #BTC #Crypto`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-  }, []);
+  const openTwitterIntent = useCallback((m) => {
+    const data = m || metrics;
+    if (!data) return;
+    const signal = data.isBuy ? 'BUY' : 'SELL';
+    const conf = data.confidence;
+    const phase = data.cyclePhase;
+    const price = Math.round(data.cp).toLocaleString('en-US');
+    const peak = Math.round(data.peakPrice / 1000);
+    const text = `BTC CycleWatch Signal ⚔️\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nSilent intelligence → satoshikuza.com\n\n#Bitcoin #BTC #Crypto`;
+    const url = 'https://satoshikuza.com';
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  }, [metrics]);
 
   const metrics = useMemo(() => {
     if (!prices || prices.length < 400) return null;
@@ -348,7 +350,7 @@ export default function CycleWatch() {
             <span className="text-cyan-400 font-bold text-sm">C</span>
           </div>
           <div>
-            <h2 className="text-white font-bold">CycleWatch</h2>
+            <h2 className="text-white font-bold">CycleWatch - Satoshikuza.com</h2>
             <p className="text-xs text-gray-500 uppercase tracking-widest">BTC 1458-DAY CYCLE PREDICTION MODEL</p>
           </div>
         </div>
@@ -409,7 +411,7 @@ export default function CycleWatch() {
              style={{ border: '1px solid rgba(6,182,212,0.3)' }}
              onClick={e => e.stopPropagation()}>
           <div className="p-4" style={{ background: '#0d0d1a' }}>
-            <p className="text-sm font-semibold text-white mb-3">Share CycleWatch signal</p>
+            <p className="text-sm font-semibold text-white mb-3">Share CycleWatch - Satoshikuza.com</p>
             <img src={shareImg} alt="CycleWatch snapshot" className="w-full rounded-lg mb-4" />
             <div className="flex gap-3">
               <button
@@ -443,7 +445,7 @@ export default function CycleWatch() {
         <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm text-white"
              style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)' }}>C</div>
         <div>
-          <h2 className="text-white font-bold text-lg">CycleWatch</h2>
+          <h2 className="text-white font-bold text-lg">CycleWatch - Satoshikuza.com</h2>
           <p className="text-xs text-gray-500 uppercase tracking-widest">BTC 1458-DAY CYCLE PREDICTION MODEL</p>
         </div>
         <div className="ml-auto flex items-center gap-3">
