@@ -18,5 +18,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      (function(){
+        try {
+          var d = { path: location.pathname, ref: document.referrer || '', lang: navigator.language || '', screen: screen.width + 'x' + screen.height };
+          navigator.sendBeacon ? navigator.sendBeacon('/api/track', JSON.stringify(d))
+            : fetch('/api/track', { method: 'POST', body: JSON.stringify(d), keepalive: true });
+        } catch(e){}
+      })();
+    </script>
   </body>
 </html>

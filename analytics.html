@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — SatoshiKuza</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a14;
+    color: #e0e0e0;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 32px; padding-bottom: 20px;
+    border-bottom: 1px solid rgba(6,182,212,0.2);
+  }
+  .header .kanji {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #f97316, #ef4444);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: bold; color: #fff;
+  }
+  .header h1 { font-size: 22px; color: #fff; }
+  .header .sub { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 2px; }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #16c784; margin-left: auto;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  /* Stats row */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 20px;
+    transition: border-color 0.3s;
+  }
+  .stat-card:hover { border-color: rgba(6,182,212,0.3); }
+  .stat-card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .stat-card .value { font-size: 32px; font-weight: 700; color: #fff; }
+  .stat-card .value.live { color: #16c784; }
+  .stat-card .value.accent { color: #06b6d4; }
+  .stat-card .change { font-size: 12px; margin-top: 4px; }
+  .stat-card .change.up { color: #16c784; }
+  .stat-card .change.down { color: #ef4444; }
+
+  /* Charts */
+  .chart-section { margin-bottom: 32px; }
+  .chart-section h2 {
+    font-size: 14px; color: #888; text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-section h2::before { content: ''; width: 3px; height: 14px; background: #06b6d4; border-radius: 2px; }
+  .chart-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 24px;
+    position: relative;
+  }
+  canvas { width: 100% !important; }
+
+  /* Tables */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+  .table-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px; padding: 20px;
+  }
+  .table-box h3 {
+    font-size: 13px; color: #888; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 16px;
+  }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .name { font-size: 13px; color: #ccc; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .count { font-size: 13px; font-weight: 600; color: #06b6d4; }
+
+  /* Live feed */
+  .feed { max-height: 400px; overflow-y: auto; }
+  .feed-item {
+    display: flex; gap: 12px; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+  .feed-item .time { color: #555; min-width: 60px; }
+  .feed-item .path { color: #06b6d4; font-weight: 600; }
+  .feed-item .device { color: #666; }
+  .feed-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .feed-item .dot.mobile { background: #f97316; }
+  .feed-item .dot.desktop { background: #16c784; }
+
+  /* Controls */
+  .controls { display: flex; gap: 8px; margin-left: auto; }
+  .controls button {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: #888; padding: 6px 14px; border-radius: 8px; font-size: 12px;
+    cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .controls button:hover, .controls button.active { background: rgba(6,182,212,0.15); color: #06b6d4; border-color: rgba(6,182,212,0.3); }
+
+  /* Donut */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; }
+  .donut-legend .item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #aaa; }
+  .donut-legend .swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+  .loading-text { color: #555; font-size: 14px; text-align: center; padding: 40px; }
+  .refresh-info { font-size: 11px; color: #444; text-align: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="kanji">忍</div>
+  <div>
+    <h1>SatoshiKuza Analytics</h1>
+    <div class="sub">Shadow Intelligence Dashboard</div>
+  </div>
+  <div class="live-dot" id="liveDot"></div>
+  <div class="controls">
+    <button class="active" data-days="7">7D</button>
+    <button data-days="14">14D</button>
+    <button data-days="30">30D</button>
+  </div>
+</div>
+
+<div class="stats" id="statsRow">
+  <div class="stat-card"><div class="label">Live Now</div><div class="value live" id="statLive">—</div></div>
+  <div class="stat-card"><div class="label">Today Views</div><div class="value" id="statTodayViews">—</div><div class="change" id="statTodayChange"></div></div>
+  <div class="stat-card"><div class="label">Today Uniques</div><div class="value accent" id="statTodayUniques">—</div></div>
+  <div class="stat-card"><div class="label">Total Views</div><div class="value" id="statTotal">—</div></div>
+  <div class="stat-card"><div class="label">Total Uniques</div><div class="value accent" id="statTotalUniques">—</div></div>
+</div>
+
+<div class="chart-section">
+  <h2>Visitors Over Time</h2>
+  <div class="chart-box">
+    <canvas id="viewsChart" height="220"></canvas>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="table-box">
+    <h3>Top Pages</h3>
+    <div id="topPages"><div class="loading-text">Loading...</div></div>
+  </div>
+  <div class="table-box">
+    <h3>Referrers</h3>
+    <div id="topRefs"><div class="loading-text">Loading...</div></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="table-box">
+    <h3>Devices</h3>
+    <div class="donut-wrap">
+      <canvas id="deviceChart" width="140" height="140"></canvas>
+      <div class="donut-legend" id="deviceLegend"></div>
+    </div>
+  </div>
+  <div class="table-box">
+    <h3>Browsers</h3>
+    <div class="donut-wrap">
+      <canvas id="browserChart" width="140" height="140"></canvas>
+      <div class="donut-legend" id="browserLegend"></div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-section">
+  <h2>Live Feed</h2>
+  <div class="chart-box">
+    <div class="feed" id="liveFeed"><div class="loading-text">Waiting for data...</div></div>
+  </div>
+</div>
+
+<div class="refresh-info">Auto-refreshes every 30 seconds</div>
+
+<script>
+const KEY = new URLSearchParams(location.search).get('key');
+let currentDays = 7;
+
+// Controls
+document.querySelectorAll('.controls button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelector('.controls .active')?.classList.remove('active');
+    btn.classList.add('active');
+    currentDays = parseInt(btn.dataset.days);
+    fetchData();
+  });
+});
+
+async function fetchData() {
+  try {
+    const res = await fetch(`/api/analytics?key=${KEY}&days=${currentDays}`);
+    if (!res.ok) throw new Error('Unauthorized');
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    console.error('Fetch failed:', e);
+  }
+}
+
+function render(data) {
+  // Stats
+  const today = data.days[data.days.length - 1];
+  const yesterday = data.days.length > 1 ? data.days[data.days.length - 2] : null;
+
+  document.getElementById('statLive').textContent = data.liveVisitors;
+  document.getElementById('statTodayViews').textContent = today.views.toLocaleString();
+  document.getElementById('statTodayUniques').textContent = today.uniques.toLocaleString();
+  document.getElementById('statTotal').textContent = data.totalViews.toLocaleString();
+  document.getElementById('statTotalUniques').textContent = data.totalUniques.toLocaleString();
+
+  if (yesterday && yesterday.views > 0) {
+    const change = ((today.views - yesterday.views) / yesterday.views * 100).toFixed(0);
+    const el = document.getElementById('statTodayChange');
+    el.textContent = `${change > 0 ? '+' : ''}${change}% vs yesterday`;
+    el.className = `change ${change >= 0 ? 'up' : 'down'}`;
+  }
+
+  drawViewsChart(data.days);
+  drawTopPages(data.days);
+  drawTopRefs(data.days);
+  drawDonut('deviceChart', 'deviceLegend', aggregateField(data.days, 'devices'),
+    { desktop: '#16c784', mobile: '#f97316', tablet: '#06b6d4' });
+  drawDonut('browserChart', 'browserLegend', aggregateField(data.days, 'browsers'),
+    { chrome: '#4285F4', firefox: '#FF7139', safari: '#006CFF', edge: '#0078D7', other: '#666' });
+  drawFeed(data.recent);
+}
+
+function aggregateField(days, field) {
+  const totals = {};
+  days.forEach(d => {
+    for (const [k, v] of Object.entries(d[field] || {})) {
+      totals[k] = (totals[k] || 0) + v;
+    }
+  });
+  return totals;
+}
+
+// ── Views Chart ──
+function drawViewsChart(days) {
+  const canvas = document.getElementById('viewsChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 220 * dpr;
+  canvas.style.height = '220px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 220;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 50 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  const views = days.map(d => d.views);
+  const uniques = days.map(d => d.uniques);
+  const maxV = Math.max(...views, 1);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxV - (maxV / 4) * i), pad.left - 8, y + 4);
+  }
+
+  // X labels
+  ctx.fillStyle = '#444'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(days.length / 7));
+  days.forEach((d, i) => {
+    if (i % step === 0 || i === days.length - 1) {
+      const x = pad.left + (i / (days.length - 1)) * cW;
+      ctx.fillText(d.date.slice(5), x, H - pad.bottom + 20);
+    }
+  });
+
+  // Area + line for views
+  function drawLine(data, color, fill) {
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad.left + (i / (data.length - 1)) * cW;
+      const y = pad.top + cH - (v / maxV) * cH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    if (fill) {
+      ctx.lineTo(pad.left + cW, pad.top + cH);
+      ctx.lineTo(pad.left, pad.top + cH);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  drawLine(views, '#06b6d4', 'rgba(6,182,212,0.08)');
+  ctx.beginPath();
+  drawLine(uniques, '#f97316', null);
+
+  // Legend
+  ctx.fillStyle = '#06b6d4'; ctx.fillRect(W - 180, 8, 10, 10);
+  ctx.fillStyle = '#888'; ctx.font = '11px monospace'; ctx.textAlign = 'left';
+  ctx.fillText('Views', W - 166, 17);
+  ctx.fillStyle = '#f97316'; ctx.fillRect(W - 100, 8, 10, 10);
+  ctx.fillStyle = '#888';
+  ctx.fillText('Uniques', W - 86, 17);
+}
+
+// ── Donut Chart ──
+function drawDonut(canvasId, legendId, data, colors) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = 140 * dpr; canvas.height = 140 * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, 140, 140);
+
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+  if (total === 0) {
+    ctx.fillStyle = '#333'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('No data', 70, 74);
+    document.getElementById(legendId).innerHTML = '';
+    return;
+  }
+
+  const cx = 70, cy = 70, r = 55, inner = 35;
+  let angle = -Math.PI / 2;
+
+  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  const legend = document.getElementById(legendId);
+  legend.innerHTML = '';
+
+  entries.forEach(([key, val]) => {
+    const slice = (val / total) * Math.PI * 2;
+    const color = colors[key] || '#555';
+
+    ctx.beginPath();
+    ctx.moveTo(cx + inner * Math.cos(angle), cy + inner * Math.sin(angle));
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.arc(cx, cy, inner, angle + slice, angle, true);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    angle += slice;
+
+    const pct = ((val / total) * 100).toFixed(0);
+    legend.innerHTML += `<div class="item"><div class="swatch" style="background:${color}"></div>${key} — ${pct}% (${val})</div>`;
+  });
+}
+
+// ── Top Pages ──
+function drawTopPages(days) {
+  const all = {};
+  days.forEach(d => { for (const [k, v] of Object.entries(d.paths || {})) all[k] = (all[k] || 0) + v; });
+  const sorted = Object.entries(all).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const el = document.getElementById('topPages');
+  if (sorted.length === 0) { el.innerHTML = '<div class="loading-text">No page data yet</div>'; return; }
+  el.innerHTML = sorted.map(([path, count]) =>
+    `<div class="row"><span class="name">${path}</span><span class="count">${count}</span></div>`
+  ).join('');
+}
+
+// ── Top Referrers ──
+function drawTopRefs(days) {
+  const all = {};
+  days.forEach(d => { for (const [k, v] of Object.entries(d.refs || {})) all[k] = (all[k] || 0) + v; });
+  const sorted = Object.entries(all).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const el = document.getElementById('topRefs');
+  if (sorted.length === 0) { el.innerHTML = '<div class="loading-text">No referrer data yet</div>'; return; }
+  el.innerHTML = sorted.map(([ref, count]) =>
+    `<div class="row"><span class="name">${ref}</span><span class="count">${count}</span></div>`
+  ).join('');
+}
+
+// ── Live Feed ──
+function drawFeed(recent) {
+  const el = document.getElementById('liveFeed');
+  if (!recent || recent.length === 0) { el.innerHTML = '<div class="loading-text">No recent activity</div>'; return; }
+  el.innerHTML = recent.map(ev => {
+    const time = new Date(ev.t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return `<div class="feed-item">
+      <div class="dot ${ev.device}"></div>
+      <span class="time">${time}</span>
+      <span class="path">${ev.path}</span>
+      <span class="device">${ev.device} · ${ev.browser}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Auto refresh ──
+fetchData();
+setInterval(fetchData, 30000);
+</script>
+</body>
+</html>
