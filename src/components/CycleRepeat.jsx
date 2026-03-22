@@ -2,7 +2,6 @@ import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { useFullPriceData } from '../hooks/usePriceData';
 
 const CYCLE_LENGTH = 1458;
-const FORECAST_DAYS = 365;
 
 function computeCycleRepeat(fullHistory) {
   if (!fullHistory || fullHistory.length < CYCLE_LENGTH + 10) return null;
@@ -11,16 +10,22 @@ function computeCycleRepeat(fullHistory) {
   const todayIdx = n - 1;
   const currentPrice = fullHistory[todayIdx].price;
 
+  // Anchor = price 1458 days ago (Pine: src[cycleLength])
   const anchorIdx = todayIdx - CYCLE_LENGTH;
   if (anchorIdx < 0) return null;
 
   const anchorPrice = fullHistory[anchorIdx].price;
   if (!anchorPrice || anchorPrice <= 0) return null;
 
+  // Scale factor (Pine: scale = src / anchor)
   const scale = currentPrice / anchorPrice;
 
+  // Forecast: replay the FULL cycle forward
+  // Pine: for k = 0 to forecastLen → histVal = src[cycleLength - k] → forecastPrices.push(histVal * scale)
+  // Our equivalent: anchorIdx + k walks from anchor forward through history
+  // We forecast up to CYCLE_LENGTH days to show the full next cycle
   const forecast = [];
-  for (let k = 0; k <= FORECAST_DAYS; k++) {
+  for (let k = 0; k <= CYCLE_LENGTH; k++) {
     const histIdx = anchorIdx + k;
     if (histIdx < 0 || histIdx >= n) { forecast.push(null); continue; }
     const hp = fullHistory[histIdx].price;
@@ -33,7 +38,8 @@ function computeCycleRepeat(fullHistory) {
     date: new Date(today.getTime() + k * 86400000),
   }));
 
-  const history = fullHistory.slice(Math.max(0, n - 400)).map(d => ({ date: d.date, price: d.price }));
+  // Show more history context (last 600 days)
+  const history = fullHistory.slice(Math.max(0, n - 600)).map(d => ({ date: d.date, price: d.price }));
   const validForecast = forecastWithDates.filter(f => f.price != null);
   const projectedTop = validForecast.reduce((max, f) => f.price > max.price ? f : max, validForecast[0] || { price: 0 });
 

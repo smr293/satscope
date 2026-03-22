@@ -77,18 +77,21 @@ export const fetchBinanceHistory = async (startMs, limit = 1000) => {
   }));
 };
 
-// Fetch full BTC history from Binance (2 calls covers 2000+ days)
+// Fetch full BTC history from Binance (3 calls covers 3000+ days from 2017)
 export const fetchFullBinanceHistory = async () => {
-  const JAN_2020 = 1577836800000; // 2020-01-01 in ms
+  const SEP_2017 = 1504224000000; // 2017-09-01 in ms
+  const JUN_2020 = 1590969600000; // 2020-06-01 in ms
 
-  // Two parallel fetches: 2020-01-01 → 2022-09-26, then latest 1000 days
-  const [older, newer] = await Promise.all([
-    fetchBinanceHistory(JAN_2020, 1000),
+  // Three parallel fetches to cover 2017-09 → now (~3100 days)
+  const [oldest, older, newer] = await Promise.all([
+    fetchBinanceHistory(SEP_2017, 1000),
+    fetchBinanceHistory(JUN_2020, 1000),
     fetchBinanceHistory(null, 1000),
   ]);
 
   // Merge and deduplicate by timestamp
   const map = new Map();
+  oldest.forEach(d => map.set(d.ts, d));
   older.forEach(d => map.set(d.ts, d));
   newer.forEach(d => map.set(d.ts, d));
 
