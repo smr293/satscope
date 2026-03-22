@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const DIST = join(__dirname, 'dist');
@@ -263,11 +264,26 @@ const server = createServer(async (req, res) => {
   try {
     const data = readFileSync(filePath);
     const ext = extname(filePath);
-    res.writeHead(200, {
-      'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000',
-    });
-    res.end(data);
+    const contentType = MIME[ext] || 'application/octet-stream';
+    const cacheControl = ext === '.html' ? 'no-cache' : 'public, max-age=31536000';
+
+    // Gzip text-based responses
+    const acceptGzip = (req.headers['accept-encoding'] || '').includes('gzip');
+    const isCompressible = /\.(html|js|css|json|svg|xml|txt)$/.test(ext);
+
+    if (acceptGzip && isCompressible && data.length > 1024) {
+      const compressed = gzipSync(data);
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Encoding': 'gzip',
+        'Cache-Control': cacheControl,
+        'Vary': 'Accept-Encoding',
+      });
+      res.end(compressed);
+    } else {
+      res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheControl });
+      res.end(data);
+    }
   } catch {
     const html = readFileSync(join(DIST, 'index.html'));
     res.writeHead(200, { 'Content-Type': 'text/html' });

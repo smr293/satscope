@@ -11,6 +11,10 @@ import CycleRepeat from './components/CycleRepeat';
 import ModelCards from './components/ModelCards';
 import NetworkStats from './components/NetworkStats';
 import NewsFeed from './components/NewsFeed';
+import MarketMetrics from './components/MarketMetrics';
+import TimeMachine from './components/TimeMachine';
+import DCACalculator from './components/DCACalculator';
+import WhaleWatch from './components/WhaleWatch';
 import CycleOracle from './components/CycleOracle';
 import Footer from './components/Footer';
 
@@ -39,10 +43,14 @@ export default function App() {
         <ErrorBoundary><PriceChart /></ErrorBoundary>
         <ErrorBoundary><CycleRepeat /></ErrorBoundary>
         <ErrorBoundary><ModelCards /></ErrorBoundary>
+        <ErrorBoundary><MarketMetrics /></ErrorBoundary>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ErrorBoundary><NetworkStats /></ErrorBoundary>
           <ErrorBoundary><NewsFeed /></ErrorBoundary>
         </div>
+        <ErrorBoundary><TimeMachine /></ErrorBoundary>
+        <ErrorBoundary><DCACalculator /></ErrorBoundary>
+        <ErrorBoundary><WhaleWatch /></ErrorBoundary>
         <ErrorBoundary><CycleOracle /></ErrorBoundary>
       </main>
       <Footer />
