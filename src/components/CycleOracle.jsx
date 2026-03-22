@@ -241,39 +241,6 @@ export default function CycleWatch() {
   const { prices, loading } = usePriceData();
   const { price: currentPrice, fearGreedValue, fearGreedLabel } = useBitcoinStore();
 
-  const handleShare = useCallback(async () => {
-    if (!cardRef.current || sharing) return;
-    setSharing(true);
-    try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: '#0d0d1a',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      setShareImg(dataUrl);
-    } catch (e) {
-      console.warn('Screenshot failed:', e);
-      // Fallback: open Twitter intent directly without image
-      openTwitterIntent();
-    }
-    setSharing(false);
-  }, [sharing]);
-
-  const openTwitterIntent = useCallback((m) => {
-    const data = m || metrics;
-    if (!data) return;
-    const signal = data.isBuy ? 'BUY' : 'SELL';
-    const conf = data.confidence;
-    const phase = data.cyclePhase;
-    const price = Math.round(data.cp).toLocaleString('en-US');
-    const peak = Math.round(data.peakPrice / 1000);
-    const text = `BTC CycleWatch Signal ⚔️\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nSilent intelligence → satoshikuza.com\n\n#Bitcoin #BTC #Crypto`;
-    const url = 'https://satoshikuza.com';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-  }, [metrics]);
-
   const metrics = useMemo(() => {
     if (!prices || prices.length < 400) return null;
 
@@ -333,6 +300,38 @@ export default function CycleWatch() {
     return { rsi, sma200, mvrvZ, cycleStartIdx, cycleDay, isBuy, confidence, buyConfidence,
              cyclePhase, peakPrice, peakDate, cp, CYCLE_LEN };
   }, [prices, currentPrice, fearGreedValue]);
+
+  const openTwitterIntent = useCallback((m) => {
+    const data = m || metrics;
+    if (!data) return;
+    const signal = data.isBuy ? 'BUY' : 'SELL';
+    const conf = data.confidence;
+    const phase = data.cyclePhase;
+    const price = Math.round(data.cp).toLocaleString('en-US');
+    const peak = Math.round(data.peakPrice / 1000);
+    const text = `BTC CycleWatch Signal ⚔️\n\n${signal} ${conf}% confidence\nPhase: ${phase}\nPrice: $${price}\nProjected Top: $${peak}K\n\nSilent intelligence → satoshikuza.com\n\n#Bitcoin #BTC #Crypto`;
+    const url = 'https://satoshikuza.com';
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  }, [metrics]);
+
+  const handleShare = useCallback(async () => {
+    if (!cardRef.current || sharing) return;
+    setSharing(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#0d0d1a',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+      setShareImg(dataUrl);
+    } catch (e) {
+      console.warn('Screenshot failed:', e);
+      openTwitterIntent();
+    }
+    setSharing(false);
+  }, [sharing, openTwitterIntent]);
 
   // Draw charts
   useEffect(() => {
