@@ -2,17 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import useBitcoinStore from '../store/useBitcoinStore';
 
 const WHALE_THRESHOLDS = [
-  { min: 1000, label: 'Mega Whale', icon: '🐋', color: '#ef4444' },
-  { min: 500, label: 'Whale', icon: '🐳', color: '#f97316' },
-  { min: 100, label: 'Big Fish', icon: '🦈', color: '#eab308' },
+  { min: 500, label: 'Mega Whale', icon: '🐋', color: '#ef4444' },
+  { min: 100, label: 'Whale', icon: '🐳', color: '#f97316' },
+  { min: 50, label: 'Big Fish', icon: '🦈', color: '#eab308' },
   { min: 10, label: 'Dolphin', icon: '🐬', color: '#06b6d4' },
+  { min: 1, label: 'Fish', icon: '🐟', color: '#666' },
 ];
 
 function classifyTx(btcAmount) {
   for (const t of WHALE_THRESHOLDS) {
     if (btcAmount >= t.min) return t;
   }
-  return { min: 0, label: 'Fish', icon: '🐟', color: '#666' };
+  return WHALE_THRESHOLDS[WHALE_THRESHOLDS.length - 1];
 }
 
 function timeAgo(timestamp) {
@@ -26,36 +27,75 @@ function timeAgo(timestamp) {
 export default function WhaleWatch() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState(10); // min BTC
+  const [filter, setFilter] = useState(10);
   const currentPrice = useBitcoinStore(s => s.price);
 
   const fetchWhales = useCallback(async () => {
     try {
-      // Fetch recent transactions from mempool.space
-      const res = await fetch('https://mempool.space/api/mempool/recent');
-      if (!res.ok) throw new Error('Failed');
-      const txs = await res.json();
+      const price = currentPrice || 84000;
 
-      // Process and sort by value
-      const processed = txs
-        .map(tx => {
-          const valueSats = tx.value || 0;
-          const btc = valueSats / 1e8;
-          const usd = btc * (currentPrice || 84000);
-          return {
-            txid: tx.txid,
-            btc,
-            usd,
-            fee: tx.fee,
-            time: tx.time || Date.now() / 1000,
-            classification: classifyTx(btc),
-          };
-        })
-        .filter(tx => tx.btc >= 1) // at least 1 BTC
+      // Get the 3 most recent blocks
+      const blocksRes = await fetch('https://mempool.space/api/v1/blocks');
+      if (!blocksRes.ok) throw new Error('blocks fetch failed');
+      const blocks = await blocksRes.json();
+      const recentBlocks = blocks.slice(0, 3);
+
+      const allTxs = [];
+
+      // Fetch transactions from each block (first page = 25 txs per block)
+      const fetches = recentBlocks.map(async (block) => {
+        try {
+          const res = await fetch(`https://mempool.space/api/block/${block.id}/txs/0`);
+          if (!res.ok) return [];
+          const txs = await res.json();
+          return txs.map(tx => {
+            // Sum all outputs to get total value moved
+            const totalSats = (tx.vout || []).reduce((sum, out) => sum + (out.value || 0), 0);
+            const btc = totalSats / 1e8;
+            return {
+              txid: tx.txid,
+              btc,
+              usd: btc * price,
+              time: block.timestamp,
+              blockHeight: block.height,
+            };
+          });
+        } catch {
+          return [];
+        }
+      });
+
+      const results = await Promise.all(fetches);
+      results.forEach(txs => allTxs.push(...txs));
+
+      // Also try to get mempool (unconfirmed) large txs
+      try {
+        const mempoolRes = await fetch('https://mempool.space/api/mempool/recent');
+        if (mempoolRes.ok) {
+          const mempoolTxs = await mempoolRes.json();
+          mempoolTxs.forEach(tx => {
+            const btc = (tx.value || 0) / 1e8;
+            if (btc >= 1) {
+              allTxs.push({
+                txid: tx.txid,
+                btc,
+                usd: btc * price,
+                time: Date.now() / 1000,
+                blockHeight: null, // unconfirmed
+              });
+            }
+          });
+        }
+      } catch { /* ok */ }
+
+      // Sort by BTC amount, filter >= 1 BTC, take top 50
+      const sorted = allTxs
+        .filter(tx => tx.btc >= 1 && tx.txid)
         .sort((a, b) => b.btc - a.btc)
-        .slice(0, 50);
+        .slice(0, 50)
+        .map(tx => ({ ...tx, classification: classifyTx(tx.btc) }));
 
-      setTransactions(processed);
+      setTransactions(sorted);
     } catch (e) {
       console.warn('Whale fetch failed:', e);
     }
@@ -64,16 +104,14 @@ export default function WhaleWatch() {
 
   useEffect(() => {
     fetchWhales();
-    const interval = setInterval(fetchWhales, 30000); // refresh every 30s
+    const interval = setInterval(fetchWhales, 60000); // refresh every 60s
     return () => clearInterval(interval);
   }, [fetchWhales]);
 
   const filtered = transactions.filter(tx => tx.btc >= filter);
 
-  // Stats
   const totalBTC = filtered.reduce((s, tx) => s + tx.btc, 0);
   const totalUSD = filtered.reduce((s, tx) => s + tx.usd, 0);
-  const megaWhales = filtered.filter(tx => tx.btc >= 1000).length;
 
   return (
     <div className="glass p-6 mt-6 animate-fade-in" style={{ border: '1px solid rgba(6,182,212,0.2)' }}>
@@ -83,14 +121,14 @@ export default function WhaleWatch() {
              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>🐋</div>
         <div className="flex-1">
           <h2 className="text-white font-bold text-lg">Whale Watch</h2>
-          <p className="text-xs text-gray-500 uppercase tracking-widest">Live Large Transactions</p>
+          <p className="text-xs text-gray-500 uppercase tracking-widest">Large BTC Transactions</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           <span className="text-xs text-gray-500">Live</span>
         </div>
       </div>
-      <p className="text-sm text-gray-400 mb-4">Tracking big BTC movements in the mempool. When whales move, pay attention.</p>
+      <p className="text-sm text-gray-400 mb-4">Tracking big BTC movements from recent blocks. When whales move, pay attention.</p>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -100,7 +138,7 @@ export default function WhaleWatch() {
         </div>
         <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="text-[10px] text-gray-500 uppercase">Total BTC</div>
-          <div className="text-lg font-black text-orange-400">₿ {totalBTC.toFixed(1)}</div>
+          <div className="text-lg font-black text-orange-400">₿ {totalBTC >= 1000 ? `${(totalBTC / 1000).toFixed(1)}K` : totalBTC.toFixed(1)}</div>
         </div>
         <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="text-[10px] text-gray-500 uppercase">Total USD</div>
@@ -115,6 +153,7 @@ export default function WhaleWatch() {
         {[
           { label: 'All (>1 BTC)', value: 1 },
           { label: '>10 BTC', value: 10 },
+          { label: '>50 BTC', value: 50 },
           { label: '>100 BTC', value: 100 },
           { label: '>500 BTC', value: 500 },
         ].map(f => (
@@ -153,6 +192,9 @@ export default function WhaleWatch() {
                         style={{ background: `${tx.classification.color}20`, color: tx.classification.color }}>
                     {tx.classification.label}
                   </span>
+                  <span className="text-[10px] text-gray-600">
+                    {tx.blockHeight ? `Block #${tx.blockHeight.toLocaleString()}` : 'Unconfirmed'}
+                  </span>
                   <span className="text-[10px] text-gray-600">{timeAgo(tx.time)}</span>
                 </div>
                 <div className="flex items-baseline gap-2 mt-1">
@@ -175,7 +217,7 @@ export default function WhaleWatch() {
         )}
       </div>
 
-      <p className="text-[10px] text-gray-600 mt-3 text-center">Data from mempool.space • Refreshes every 30s • Unconfirmed transactions</p>
+      <p className="text-[10px] text-gray-600 mt-3 text-center">Data from mempool.space • Recent blocks + mempool • Refreshes every 60s</p>
     </div>
   );
 }
