@@ -128,16 +128,21 @@ export default function CycleRepeat() {
       ctx.fillText(label, PAD.left - 8, y);
     });
 
-    // Month labels
-    const startM = new Date(minT); startM.setDate(1);
+    // Date labels — adaptive spacing based on total time range
+    const totalYears = dateRange / (365.25 * 86400000);
+    const monthStep = totalYears > 6 ? 12 : totalYears > 3 ? 6 : totalYears > 1.5 ? 3 : 2;
+    const startM = new Date(minT); startM.setDate(1); startM.setMonth(startM.getMonth() + 1);
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    for (let d = new Date(startM); d.getTime() <= maxT; d.setMonth(d.getMonth() + 2)) {
+    for (let d = new Date(startM); d.getTime() <= maxT; d.setMonth(d.getMonth() + monthStep)) {
       const x = toX(d);
-      if (x < PAD.left || x > W - PAD.right) continue;
+      if (x < PAD.left + 20 || x > W - PAD.right - 20) continue;
       ctx.strokeStyle = 'rgba(255,255,255,0.04)';
       ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, H - PAD.bottom); ctx.stroke();
-      ctx.fillStyle = '#666'; ctx.font = '11px Inter, sans-serif';
-      ctx.fillText(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), x, H - PAD.bottom + 8);
+      ctx.fillStyle = '#555'; ctx.font = '10px Inter, sans-serif';
+      const label = monthStep >= 12
+        ? d.getFullYear().toString()
+        : d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      ctx.fillText(label, x, H - PAD.bottom + 8);
     }
 
     // Today line
