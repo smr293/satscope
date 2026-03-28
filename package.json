@@ -1,39 +1,41 @@
 {
-  "name": "satoshikuza",
+  "name": "agnt-station",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "start": "node server.js",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "chart.js": "^4.5.1",
-    "html2canvas": "^1.4.1",
-    "lightweight-charts": "^5.1.0",
-    "react": "^19.2.4",
-    "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.2.4",
-    "serve": "^14.2.6",
-    "zustand": "^5.0.12"
-  },
-  "engines": {
-    "node": ">=18"
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "openai": "^4.56.0",
+    "@anthropic-ai/sdk": "^0.24.0",
+    "better-sqlite3": "^11.1.2",
+    "drizzle-orm": "^0.32.0",
+    "drizzle-kit": "^0.23.0",
+    "tailwindcss": "^3.4.6",
+    "postcss": "^8.4.39",
+    "autoprefixer": "^10.4.19",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14",
+    "playwright": "^1.45.3",
+    "axios": "^1.7.2",
+    "lucide-react": "^0.400.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@tailwindcss/vite": "^4.2.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "tailwindcss": "^4.2.1",
-    "vite": "^6.0.0"
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/nodemailer": "^6.4.15",
+    "typescript": "^5.5.3"
   }
 }
